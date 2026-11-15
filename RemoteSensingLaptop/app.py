@@ -30,7 +30,9 @@ def detect_vertical_edge(image):
 
     candidates = []
     if lines is not None:
-        for line in lines[:, 0]:
+        # OpenCV can return Hough lines with different nesting shapes across
+        # versions. Normalize them to one row per [x1, y1, x2, y2].
+        for line in lines.reshape(-1, 4):
             x1, y1, x2, y2 = map(float, line)
             dx = abs(x2 - x1)
             dy = abs(y2 - y1)
