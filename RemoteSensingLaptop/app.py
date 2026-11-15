@@ -18,33 +18,35 @@ def choose_point(image, message, window_name):
     display = image.copy()
 
     def on_mouse(event, x, y, _flags, _param):
+        nonlocal display
         if event == cv2.EVENT_LBUTTONDOWN:
             selected.clear()
             selected.append(ImagePoint(float(x), float(y)))
-            marked = image.copy()
+            display = image.copy()
             cv2.drawMarker(
-                marked,
+                display,
                 (x, y),
                 (0, 255, 0),
                 cv2.MARKER_CROSS,
                 24,
                 2,
             )
-            cv2.imshow(window_name, marked)
+            cv2.imshow(window_name, display)
 
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     cv2.setMouseCallback(window_name, on_mouse)
     cv2.imshow(window_name, display)
     print(message)
-    print("Click the requested point, then press Enter in this terminal.")
+    print("Click the requested point, then press Enter while the image window is active.")
 
     while True:
-        cv2.waitKey(20)
-        response = input().strip().lower()
-        if response == "" and selected:
+        key = cv2.waitKey(20) & 0xFF
+        if key in (13, 10) and selected:
             cv2.destroyWindow(window_name)
             return selected[0]
-        print("Please click a point in the image, then press Enter.")
+        if key == 27:
+            cv2.destroyWindow(window_name)
+            raise KeyboardInterrupt
 
 
 def angle_from_pixel(y, image_height, focal_length):
@@ -55,8 +57,7 @@ def angle_from_pixel(y, image_height, focal_length):
 def calculate_measurement(
     image_1_bottom,
     image_2_bottom,
-    image_3_bottom,
-    image_3_top,
+    image_2_top,
     image_height,
     baseline,
     focal_length,
@@ -68,10 +69,10 @@ def calculate_measurement(
     distance = focal_length * baseline / disparity
 
     bottom_angle = angle_from_pixel(
-        image_3_bottom.y, image_height, focal_length
+        image_2_bottom.y, image_height, focal_length
     )
     top_angle = angle_from_pixel(
-        image_3_top.y, image_height, focal_length
+        image_2_top.y, image_height, focal_length
     )
     height = distance * (math.tan(top_angle) - math.tan(bottom_angle))
 
@@ -114,12 +115,11 @@ def main():
 
         image_1 = capture_image(camera, "Image 1: original position")
         image_2 = capture_image(camera, "Image 2: move horizontally by the baseline")
-        image_3 = capture_image(camera, "Image 3: same position as Image 2")
     finally:
         camera.release()
         cv2.destroyAllWindows()
 
-    h, _w = image_3.shape[:2]
+    h, _w = image_2.shape[:2]
     image_1_bottom = choose_point(
         image_1,
         "Select the bottom of the object in Image 1.",
@@ -130,23 +130,17 @@ def main():
         "Select the same bottom point in Image 2.",
         "Select Image 2 bottom",
     )
-    image_3_bottom = choose_point(
-        image_3,
-        "Select the bottom of the object in Image 3.",
-        "Select Image 3 bottom",
-    )
-    image_3_top = choose_point(
-        image_3,
-        "Select the top of the object in Image 3.",
-        "Select Image 3 top",
+    image_2_top = choose_point(
+        image_2,
+        "Select the top of the object in Image 2.",
+        "Select Image 2 top",
     )
 
     try:
         distance, height, disparity, bottom_angle, top_angle = calculate_measurement(
             image_1_bottom,
             image_2_bottom,
-            image_3_bottom,
-            image_3_top,
+            image_2_top,
             h,
             args.baseline,
             args.focal_length,

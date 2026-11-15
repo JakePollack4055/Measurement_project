@@ -35,7 +35,17 @@ def main():
 
             image_size = (frame.shape[1], frame.shape[0])
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            found, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
+            # The SB detector is more reliable than the classic detector for
+            # webcams, perspective, and uneven lighting. Fall back when an
+            # older OpenCV build does not provide it.
+            if hasattr(cv2, "findChessboardCornersSB"):
+                found, corners = cv2.findChessboardCornersSB(
+                    gray,
+                    CHECKERBOARD,
+                    flags=cv2.CALIB_CB_EXHAUSTIVE | cv2.CALIB_CB_ACCURACY,
+                )
+            else:
+                found, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, None)
 
             preview = frame.copy()
             if found:
