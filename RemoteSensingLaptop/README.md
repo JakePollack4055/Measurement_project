@@ -29,7 +29,6 @@ After capture, the program asks you to click:
 2. The object bottom in Image 2
 3. The object top in Image 2
 
-The clicks are temporary image annotations; the program does not interact with the physical object.
 
 ## Camera calibration
 
