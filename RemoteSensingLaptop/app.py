@@ -123,34 +123,21 @@ def choose_point(image, message, window_name, suggested=None, line=None):
             raise KeyboardInterrupt
 
 
-def angle_from_pixel(y, image_height, focal_length):
-    principal_y = image_height / 2.0
-    return math.atan2(principal_y - y, focal_length)
-
-
 def calculate_measurement(
     image_1_bottom,
     image_2_bottom,
     image_2_top,
-    image_height,
     baseline,
-    focal_length,
+    
 ):
     disparity = abs(image_1_bottom.x - image_2_bottom.x)
     if disparity < 1.0:
         raise ValueError("The bottom-point displacement is too small to calculate distance.")
 
-    distance = focal_length * baseline / disparity
+    ruler = baseline / disparity
+    height = ruler * (abs(image_2_bottom.y - image_2_top.y))
 
-    bottom_angle = angle_from_pixel(
-        image_2_bottom.y, image_height, focal_length
-    )
-    top_angle = angle_from_pixel(
-        image_2_top.y, image_height, focal_length
-    )
-    height = distance * (math.tan(top_angle) - math.tan(bottom_angle))
-
-    return distance, height, disparity, bottom_angle, top_angle
+    return height, disparity
 
 
 def capture_image(camera, label):
@@ -172,12 +159,11 @@ def capture_image(camera, label):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", type=float, required=True, help="Horizontal movement in feet")
-    parser.add_argument("--focal-length", type=float, required=True, help="Calibrated focal length in pixels")
     parser.add_argument("--camera", type=int, default=0, help="Webcam index")
     args = parser.parse_args()
 
-    if args.baseline <= 0 or args.focal_length <= 0:
-        raise SystemExit("Baseline and focal length must be positive.")
+    if args.baseline <= 0:
+        raise SystemExit("Baseline must be positive.")
 
     camera = cv2.VideoCapture(args.camera)
     if not camera.isOpened():
@@ -225,22 +211,18 @@ def main():
     )
 
     try:
-        distance, height, disparity, bottom_angle, top_angle = calculate_measurement(
+        height, disparity = calculate_measurement(
             image_1_bottom,
             image_2_bottom,
             image_2_top,
-            h,
             args.baseline,
-            args.focal_length,
+            
         )
     except ValueError as error:
         raise SystemExit(str(error)) from error
 
     print("\nMeasurement result")
     print(f"Bottom-point disparity: {disparity:.2f} pixels")
-    print(f"Distance to object:     {distance:.3f} ft")
-    print(f"Bottom angle:           {math.degrees(bottom_angle):.3f} degrees")
-    print(f"Top angle:              {math.degrees(top_angle):.3f} degrees")
     print(f"Object height:          {height:.3f} ft")
     print([image_1_bottom, image_2_top, image_2_bottom])
 
