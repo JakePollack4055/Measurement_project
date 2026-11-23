@@ -242,7 +242,7 @@ def main():
     print(f"Bottom angle:           {math.degrees(bottom_angle):.3f} degrees")
     print(f"Top angle:              {math.degrees(top_angle):.3f} degrees")
     print(f"Object height:          {height:.3f} ft")
-    print([image_1_bottom, image_1_top, image_2_top])
+    print([image_1_bottom, image_2_top, image_2_bottom])
 
 
 if __name__ == "__main__":
